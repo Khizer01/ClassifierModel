@@ -71,7 +71,7 @@ Output ONLY valid JSON:
                 do_sample=False,
                 pad_token_id=tokenizer.pad_token_id,
                 eos_token_id=tokenizer.eos_token_id,
-                use_cache=True
+                use_cache=False
             )
         
         generation_time = time.time() - start

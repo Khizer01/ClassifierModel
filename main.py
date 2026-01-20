@@ -8,19 +8,12 @@ from database import DatabaseManager
 from model import AdClassifier
 
 
-async def _run_once(keyword: str) -> int:
-    settings = get_settings()
-
+async def _classify_keyword(keyword: str, db_manager: DatabaseManager, classifier: AdClassifier) -> int:
     if not keyword or not keyword.strip():
         print("ERROR: keyword is required", file=sys.stderr)
         return 2
 
     keyword = keyword.strip()
-
-    print("Initializing...")
-    db_manager = DatabaseManager(settings.database_path)
-    classifier = AdClassifier()
-    classifier.load_model()
 
     ads = await db_manager.get_ads_by_keyword(keyword)
     if not ads:
@@ -37,6 +30,36 @@ async def _run_once(keyword: str) -> int:
     }
     print(json.dumps(output, indent=2))
     return 0
+
+
+async def _interactive_loop(initial_keyword: str | None) -> int:
+    settings = get_settings()
+
+    print("Initializing...")
+    db_manager = DatabaseManager(settings.database_path)
+    await db_manager.ensure_initialized()
+
+    classifier = AdClassifier()
+    classifier.load_model()
+
+    if initial_keyword is not None and initial_keyword.strip():
+        rc = await _classify_keyword(initial_keyword, db_manager, classifier)
+        if rc != 0:
+            return rc
+
+    while True:
+        try:
+            keyword = input("Enter keyword (or 'exit'): ").strip()
+        except EOFError:
+            return 0
+
+        if keyword.lower() == "exit":
+            return 0
+
+        if not keyword:
+            continue
+
+        await _classify_keyword(keyword, db_manager, classifier)
 
 
 def _parse_args(argv: list[str]) -> argparse.Namespace:
@@ -57,13 +80,7 @@ def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     keyword = args.keyword
 
-    if keyword is None:
-        try:
-            keyword = input("Enter keyword: ").strip()
-        except EOFError:
-            keyword = ""
-
-    return asyncio.run(_run_once(keyword))
+    return asyncio.run(_interactive_loop(keyword))
 
 
 if __name__ == "__main__":

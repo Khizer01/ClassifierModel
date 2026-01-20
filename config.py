@@ -22,6 +22,11 @@ class Settings(BaseSettings):
         env_file = str(_PROJECT_ROOT / ".env")
         case_sensitive = False
 
+    def model_post_init(self, __context) -> None:
+        db_path = Path(self.database_path)
+        if not db_path.is_absolute():
+            self.database_path = str((_PROJECT_ROOT / db_path).resolve())
+
 @lru_cache()
 def get_settings() -> Settings:
     return Settings()

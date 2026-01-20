@@ -257,7 +257,7 @@ Return STRICT JSON ONLY in this exact format:
                     do_sample=False,
                     pad_token_id=self.tokenizer.pad_token_id,
                     eos_token_id=self.tokenizer.eos_token_id,
-                    use_cache=True
+                    use_cache=False
                 )
             
             for idx, output in enumerate(outputs):
