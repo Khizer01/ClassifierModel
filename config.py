@@ -7,9 +7,9 @@ _PROJECT_ROOT = Path(__file__).resolve().parent
 class Settings(BaseSettings):
     database_path: str = str(_PROJECT_ROOT / "ads_data.db")
     model_name: str = "microsoft/Phi-3.5-mini-instruct"
-    batch_size: int = 4
-    max_length: int = 256
-    max_new_tokens: int = 50
+    batch_size: int = 8
+    max_length: int = 192
+    max_new_tokens: int = 20
     device: str = "cpu"
     use_4bit_quantization: bool = False
     enable_tf32: bool = True

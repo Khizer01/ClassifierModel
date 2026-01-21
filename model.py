@@ -144,36 +144,12 @@ class AdClassifier:
         print("Model loaded successfully")
     
     def _create_prompt(self, keyword: str, ad_text: str) -> str:
-        prompt = f"""You are an ad classification engine used by a brand intelligence platform.
-
-Your task is to analyze advertisements and social media posts and classify them based on INTENT, not keywords.
-
-IMPORTANT RULES:
-- Mentioning a product or keyword alone does NOT make it an ad.
-- Personal opinions, stories, or fan posts are NOT promotional ads.
-- An ad is promotional ONLY if it is created to market, sell, or promote a product, service, or brand.
-
-You must suggest relevance only if the content appears to be a brand-driven or business-driven advertisement.
-
-Brand Context:
-Target Brand: {keyword}
-
-Classification Rules:
-1. Mark is_relevant = true ONLY if the content promotes, markets, or advertises a product or service.
-2. Mark is_relevant = false for:
-   - Personal stories
-   - Fan pages
-   - Organic mentions
-   - News articles
-   - Novels
-   - Stories
-3. Identify the main theme of the ad.
-
-Ad Text:
-{ad_text}
-
-Return STRICT JSON ONLY in this exact format:
-{{"is_relevant": true, "theme": "Product Promotion"}}"""
+        prompt = (
+            "Classify if the text is a promotional advertisement for the target brand. "
+            "Return STRICT JSON only: {\"is_relevant\": true|false, \"theme\": \"...\"}.\n"
+            f"Target brand: {keyword}\n"
+            f"Text: {ad_text}"
+        )
         
         return prompt
     
@@ -251,14 +227,20 @@ Return STRICT JSON ONLY in this exact format:
                 inputs = {k: v.to(self.device) for k, v in inputs.items()}
             
             with torch.inference_mode():
-                outputs = self.model.generate(
-                    **inputs,
-                    max_new_tokens=self.settings.max_new_tokens,
-                    do_sample=False,
-                    pad_token_id=self.tokenizer.pad_token_id,
-                    eos_token_id=self.tokenizer.eos_token_id,
-                    use_cache=False
-                )
+                generation_kwargs = {
+                    "max_new_tokens": self.settings.max_new_tokens,
+                    "do_sample": False,
+                    "num_beams": 1,
+                    "pad_token_id": self.tokenizer.pad_token_id,
+                    "eos_token_id": self.tokenizer.eos_token_id,
+                    "use_cache": False,
+                }
+
+                try:
+                    outputs = self.model.generate(**inputs, **generation_kwargs)
+                except TypeError:
+                    generation_kwargs.pop("use_cache", None)
+                    outputs = self.model.generate(**inputs, **generation_kwargs)
             
             for idx, output in enumerate(outputs):
                 gen_tokens = output[int(input_lengths[idx]):]
